@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read access to public content
+    match /public/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // User profiles - users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User content - users can manage their own content
+    match /users/{userId}/content/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public projects - anyone can read, authenticated users can create
+    match /projects/{projectId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && 
+        resource.data.authorId == request.auth.uid;
+    }
+    
+    // Public downloads - anyone can read, authenticated users can create
+    match /downloads/{downloadId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && 
+        resource.data.authorId == request.auth.uid;
+    }
+    
+    // Contact form submissions - anyone can create, only admins can read
+    match /contacts/{contactId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null && 
+        request.auth.token.admin == true;
+    }
+    
+    // Blog posts - anyone can read, authenticated authors can create/update
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && 
+        resource.data.authorId == request.auth.uid;
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
